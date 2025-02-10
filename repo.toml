@@ -81,14 +81,13 @@ publish_pip_cache = false
 
 [repo_precache_exts]
 # Apps to run and precache
-apps = [
-]
+apps = ["${root}/source/apps/omni.app.conditioning_for_precise_visual_generative_ai.kit", "${root}/source/apps/precise_genai.lab_app.kit", "${root}/source/apps/precise_genai.lab_app_streaming.kit", "${root}/source/apps/ash_app.test_scene.kit", "${root}/source/apps/ash_app.test_scene_streaming.kit"]
 
-registries = [
-    { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/106/shared" },
-    { name = "kit/sdk", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/sdk/${kit_version_short}/${kit_git_hash}" },
-    { name = "kit/community", url = "https://dw290v42wisod.cloudfront.net/exts/kit/community" },
-]
+   registries = [
+      { name = "kit/default", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/106/shared" },
+      { name = "kit/sdk", url = "https://ovextensionsprod.blob.core.windows.net/exts/kit/prod/sdk/${kit_version_short}/${kit_git_hash}" },
+      { name = "kit/community", url = "https://dw290v42wisod.cloudfront.net/exts/kit/community" },
+   ]
 
 
 ########################################################################################################################
@@ -172,5 +171,3 @@ type_ordering = [
     "ApplicationTemplate",
     "ApplicationLayerTemplate",
 ]
-
-
