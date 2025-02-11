@@ -18,5 +18,3 @@ repo_build.prebuild_copy {
 define_app("precise_genai.lab_app.kit")
 define_app("precise_genai.lab_app_streaming.kit")
 define_app("omni.app.conditioning_for_precise_visual_generative_ai.kit")
-define_app("ash_app.test_scene.kit")
-define_app("ash_app.test_scene_streaming.kit")
