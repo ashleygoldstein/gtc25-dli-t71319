@@ -298,25 +298,25 @@ class UpliftParameterWidget:
                         Separator()
                         Info(tooltip_heading="Text search", tooltip="This sets the USD Variant Set for different HDR images used beyond the window of the scene. These were generated using Edify360.")
                 # COMMENT OUT THE FOLLOWING LINES
-                    # combo = ComboBox(
-                    #     0,
-                    #     "Lighting 1",
-                    #     "Lighting 2",
-                    #     arrow_only=False,
-                    # )
-                    # combo.model.add_item_changed_fn(self.change_env)
+                    combo = ComboBox(
+                        0,
+                        "Lighting 1",
+                        "Lighting 2",
+                        arrow_only=False,
+                    )
+                    combo.model.add_item_changed_fn(self.change_env)
                 # STOP HERE
 
             # Uncomment the following to change the combobox to a prompt field
-                    with ui.HStack():
-                        string_model = ui.SimpleStringModel("ENTER A PROMPT")
-                        ui.StringField(string_model, height=25)
+                    # with ui.HStack():
+                    #     string_model = ui.SimpleStringModel("ENTER A PROMPT")
+                    #     ui.StringField(string_model, height=25)
 
-                        RoundButton(
-                            "Run",
-                            width=90,
-                            clicked_fn=lambda: self.change_env(string_model, None)
-                        )
+                    #     RoundButton(
+                    #         "Run",
+                    #         width=90,
+                    #         clicked_fn=lambda: self.change_env(string_model, None)
+                    #     )
 
             Separator()
             Separator()
