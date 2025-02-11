@@ -36,3 +36,4 @@ deps/**/user.toml
 
 # Streaming EventTrace
 *.etli
+ComfyUI_CAVA.zip
