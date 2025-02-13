@@ -10,8 +10,10 @@
 
 __all__ = ["UpliftParameterWidget"]
 
-from re import S
 
+from urllib import request, error
+import os
+import json
 import carb
 import carb.events
 import carb.tokens
@@ -20,6 +22,9 @@ import omni.kit.app
 import omni.ui as ui
 from omni.ai.viewport.core.abstract_uplift_model import AbstractUpliftModel
 from omni.ui import color as cl
+import omni.usd
+from pxr import Sdf, Usd, UsdGeom, UsdShade
+
 
 
 class ExpandablePrompt:
@@ -164,10 +169,19 @@ class UpliftParameterWidget:
         self._uplift_model = uplift_model
         self._uplift_cb = uplift_cb
         self._frame = ui.Frame(build_fn=self._build_fn, height=0)
+        self._tasks = []  # Keep track of running tasks
 
     def destroy(self):
-        self._frame.destroy()
-        self._frame = None
+        """Clean up resources when the widget is destroyed."""
+        # Cancel any running async tasks
+        for task in self._tasks:
+            task.cancel()
+        self._tasks.clear()
+
+        # Destroy the frame
+        if self._frame:
+            self._frame.destroy()
+            self._frame = None
 
     def set_uplift_model(self, uplift_model: AbstractUpliftModel):
         self._uplift_model = uplift_model
@@ -213,20 +227,170 @@ class UpliftParameterWidget:
         bus = omni.kit.app.get_app().get_message_bus_event_stream()
         bus.push(new_event_type, sender=_sender_id, payload=new_payload)
 
-
-# REMOVE combo_model and add string_model when we change to prompt field
     def change_env(self, combo_model, _):
+        """Change the environment variant based on combo box selection."""
         v = combo_model.get_item_value_model().get_value_as_int()
-        new_payload = {"variant": "Lake_view"}
-        if v == 1:
-            new_payload["variant"] = "Lookout"
-        elif v == 2:
-            new_payload["variant"] = "None"
+        new_payload = {"variant": "Lake_view"}  # Default variant
 
-        _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
-        new_event_type = carb.events.type_from_string("setBackdropVariant")
-        bus = omni.kit.app.get_app().get_message_bus_event_stream()
-        bus.push(new_event_type, sender=_sender_id, payload=new_payload)
+        # Map index to variant name
+        variant_map = {
+            0: "Lake_view",
+            1: "Lookout",
+            2: "Edify",
+            3: "None"
+        }
+
+        if v in variant_map:
+            new_payload["variant"] = variant_map[v]
+
+        print(f"\nChanging environment variant:")
+        print(f"Selected index: {v}")
+        print(f"Sending payload: {new_payload}")
+
+        try:
+            _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
+            new_event_type = carb.events.type_from_string("setBackdropVariant")
+            bus = omni.kit.app.get_app().get_message_bus_event_stream()
+            bus.push(new_event_type, sender=_sender_id, payload=new_payload)
+            print(f"✓ Event sent: setBackdropVariant with variant '{new_payload['variant']}'")
+        except Exception as e:
+            print(f"❌ Error sending backdrop variant event: {str(e)}")
+
+    def check_generation_status(self, generation_id):
+        """Check the status of a generation request and return panorama URL if ready."""
+        api_token = "v2/N0Q1UVM2RmNPbjZaSE9seXVydTR2NExZaEFmejZUV0svNDYwNTY0NjM1L2N1c3RvbWVyLzQvRnpEdVpHVmhMVlNkUW10c2l3elZVQUg0Z09SYzZfTktnQzBCUHBURnJsWEZxTWF3SUpzc3JXRjhrRm5ONW5La2FUNm9YREZWX1RZa2o2czRqU1AtNlBUTTd0d0NfaGYyMWQ5T2VKWHpKOVVUVDhaNFFKbDRGSmprMkpORkJjY1AzS0I1cHBOekh6Yk1ldF83azdfRWpmZkxKbUNsWGsxZ25vazVFZDRBWTl1cVI4OEo5Qk1acHVmM2VEY1lGWG04NjRiSmZ2VktvUDNGbW1xMWUybWR0QS94dW13dzN4NWdGNmlzZVJlUG12SDBR"
+        url = f"https://api.shutterstock.com/v2/ai-generated/{generation_id}"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_token}"
+        }
+
+        try:
+            req = request.Request(url, headers=headers, method='GET')
+            with request.urlopen(req) as response:
+                response_data = json.loads(response.read().decode('utf-8'))
+
+                if response_data.get("status") == "completed":
+                    # Look for panorama URL in output
+                    for output_item in response_data.get("output", []):
+                        if output_item.get("type") == "panorama":
+                            return output_item.get("url")
+                return None
+
+        except Exception as e:
+            print(f"Error checking generation status: {str(e)}")
+            return None
+
+    async def call_shutterstock_api(self, prompt_text):
+        """Call Shutterstock API to get AI generated panorama."""
+        if not prompt_text or prompt_text.strip() == "":
+            print("❌ No prompt provided")
+            return
+
+        if prompt_text.upper() == "ENTER A PROMPT":
+            print("❌ Default prompt detected")
+            return
+
+        print(f"\nStarting image generation with prompt: '{prompt_text}'")
+
+        # Constants should be moved to configuration
+        API_TOKEN = "v2/N0Q1UVM2RmNPbjZaSE9seXVydTR2NExZaEFmejZUV0svNDYwNTY0NjM1L2N1c3RvbWVyLzQvRnpEdVpHVmhMVlNkUW10c2l3elZVQUg0Z09SYzZfTktnQzBCUHBURnJsWEZxTWF3SUpzc3JXRjhrRm5ONW5La2FUNm9YREZWX1RZa2o2czRqU1AtNlBUTTd0d0NfaGYyMWQ5T2VKWHpKOVVUVDhaNFFKbDRGSmprMkpORkJjY1AzS0I1cHBOekh6Yk1ldF83azdfRWpmZkxKbUNsWGsxZ25vazVFZDRBWTl1cVI4OEo5Qk1acHVmM2VEY1lGWG04NjRiSmZ2VktvUDNGbW1xMWUybWR0QS94dW13dzN4NWdGNmlzZVJlUG12SDBR"
+        MAX_ATTEMPTS = 30
+        RETRY_DELAY = 5
+
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {API_TOKEN}"
+        }
+
+        data = {
+            "prompt": prompt_text,
+            "input_images": [],
+            "options": {
+                "top_prompt": "Blue sky",
+                "bottom_prompt": "Solid ground"
+            }
+        }
+
+        target_dir = os.path.join("source", "extensions", "omni.conditioning_for_precise_visual_generative_ai.setup",
+                                "data", "Collected_EspressoMachine_Asset", "hdri")
+        target_path = os.path.join(target_dir, "edify.hdr")
+
+        try:
+            # Ensure target directory exists
+            os.makedirs(target_dir, exist_ok=True)
+
+            # Start generation
+            req = request.Request(
+                "https://api.shutterstock.com/v2/ai-generated/text-to-panorama",
+                data=json.dumps(data).encode('utf-8'),
+                headers=headers,
+                method='POST'
+            )
+
+            with request.urlopen(req) as response:
+                response_data = json.loads(response.read().decode('utf-8'))
+                generation_id = response_data.get("id")
+                if not generation_id:
+                    print("❌ Failed to get generation ID")
+                    return
+
+            print(f"✓ Generation started with ID: {generation_id}")
+
+            # Check status until complete
+            import time
+            for attempt in range(MAX_ATTEMPTS):
+                print(f"\nChecking generation status (attempt {attempt + 1}/{MAX_ATTEMPTS})...")
+                panorama_url = self.check_generation_status(generation_id)
+
+                if panorama_url:
+                    print("\n✓ Generation completed successfully!")
+                    print(f"Panorama URL: {panorama_url}")
+
+                    try:
+                        # Download and save HDR image
+                        req = request.Request(panorama_url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with request.urlopen(req) as response, open(target_path, 'wb') as out_file:
+                            data = response.read()
+                            print(f"✓ Downloaded {len(data)} bytes")
+                            out_file.write(data)
+                            out_file.flush()
+                            os.fsync(out_file.fileno())
+
+                        # Verify file
+                        if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
+                            print(f"✓ HDR image saved to: {target_path}")
+
+                            # Switch to Edify variant
+                            _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
+                            new_event_type = carb.events.type_from_string("setBackdropVariant")
+                            bus = omni.kit.app.get_app().get_message_bus_event_stream()
+                            bus.push(new_event_type, sender=_sender_id, payload={"variant": "Edify"})
+                            print("✓ Switched to Edify variant")
+
+                            # Wait for viewport update
+                            app = omni.kit.app.get_app()
+                            for _ in range(10):
+                                await app.next_update_async()
+
+                            print("✓ Environment update complete")
+                            return
+                        else:
+                            print("❌ Failed to verify saved file")
+                            return
+
+                    except Exception as e:
+                        print(f"❌ Error saving HDR image: {str(e)}")
+                        return
+
+                print(f"Still generating... waiting {RETRY_DELAY} seconds")
+                await omni.kit.app.get_app().next_update_async()
+                time.sleep(RETRY_DELAY)
+
+            print(f"\n❌ Generation timed out after {MAX_ATTEMPTS * RETRY_DELAY} seconds")
+
+        except Exception as e:
+            print(f"❌ Error in API call: {str(e)}")
 
     def _build_fn(self):
         params = self._uplift_model.get_parameters_spec()
@@ -274,6 +438,7 @@ class UpliftParameterWidget:
 
             Separator()
 
+
             with ui.HStack(height=25, separate_window=True, content_clipping=True):
                 with ui.VStack(height=0, spacing=3):
                     with ui.HStack(width=0):
@@ -297,26 +462,27 @@ class UpliftParameterWidget:
                         Label("Environment HDRI")
                         Separator()
                         Info(tooltip_heading="Text search", tooltip="This sets the USD Variant Set for different HDR images used beyond the window of the scene. These were generated using Edify360.")
-                # COMMENT OUT THE FOLLOWING LINES
                     combo = ComboBox(
                         0,
-                        "Lighting 1",
-                        "Lighting 2",
+                        "Lake View",
+                        "Lookout",
+                        "Edify",
+                        "None",
                         arrow_only=False,
                     )
                     combo.model.add_item_changed_fn(self.change_env)
-                # STOP HERE
 
-            # Uncomment the following to change the combobox to a prompt field
-                    # with ui.HStack():
-                    #     string_model = ui.SimpleStringModel("ENTER A PROMPT")
-                    #     ui.StringField(string_model, height=25)
 
-                    #     RoundButton(
-                    #         "Run",
-                    #         width=90,
-                    #         clicked_fn=lambda: self.change_env(string_model, None)
-                    #     )
+                    with ui.HStack():
+                        self._string_model = ui.SimpleStringModel("")  # Store as instance variable
+                        field = ui.StringField(self._string_model, height=25, placeholder="Enter your prompt here")
+
+                        RoundButton(
+                            "Run",
+                            width=90,
+                            clicked_fn=self.run_async_handler
+                        )
+
 
             Separator()
             Separator()
@@ -393,3 +559,76 @@ class UpliftParameterWidget:
                     Separator()
                     Info(tooltip_heading="Heading", tooltip=param["default_value"])
                 self._build_float_param(param)
+
+    def create_edify_variant(self):
+        """Create the edify variant if it doesn't exist."""
+        try:
+            # Get the stage
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                print("Error: Could not get stage")
+                return False
+
+            # Get the variant controller
+            variant_controller_path = "/World/Graphs/VariantController"
+            variant_controller = stage.GetPrimAtPath(variant_controller_path)
+            if not variant_controller:
+                print(f"Error: Could not find variant controller at {variant_controller_path}")
+                return False
+
+            print("Found variant controller, exploring properties:")
+            # Print all properties of the variant controller to understand its structure
+            for prop in variant_controller.GetProperties():
+                print(f"- {prop.GetName()}: {prop.Get() if prop.Get() is not None else 'None'}")
+
+            # Try to get or create the variant set on the controller
+            variant_sets = variant_controller.GetVariantSets()
+            if not variant_sets.HasVariantSet("BackdropVariant"):
+                print("Creating new variant set 'BackdropVariant'")
+                variant_sets.AddVariantSet("BackdropVariant")
+
+            variant_set = variant_sets.GetVariantSet("BackdropVariant")
+            variants = variant_set.GetVariantNames()
+            print(f"Existing backdrop variants: {variants}")
+
+            if "edify" not in variants:
+                print("Creating new 'edify' variant")
+                variant_set.AddVariant("edify")
+                variant_set.SetVariantSelection("edify")
+                with variant_set.GetVariantEditContext():
+                    # Create attributes needed for the edify variant
+                    if not variant_controller.HasAttribute("customImageUrl"):
+                        variant_controller.CreateAttribute("customImageUrl", Sdf.ValueTypeNames.String)
+                    if not variant_controller.HasAttribute("variantName"):
+                        variant_controller.CreateAttribute("variantName", Sdf.ValueTypeNames.String).Set("edify")
+                print("Successfully created 'edify' variant")
+                return True
+            else:
+                print("'edify' variant already exists")
+                return True
+
+        except Exception as e:
+            print(f"Error creating edify variant: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            return False
+
+    def run_async_handler(self):
+        """Handle async operations and keep track of tasks."""
+        import asyncio
+        task = asyncio.ensure_future(self.on_run_clicked())
+        self._tasks.append(task)
+
+        def cleanup_task(future):
+            self._tasks.remove(future)
+
+        task.add_done_callback(cleanup_task)
+
+    async def on_run_clicked(self):
+        """Handle the Run button click."""
+        try:
+            prompt = self._string_model.get_value_as_string()
+            if prompt:
+                await self.call_shutterstock_api(prompt)
+        except Exception as e:
+            print(f"Error in on_run_clicked: {str(e)}")

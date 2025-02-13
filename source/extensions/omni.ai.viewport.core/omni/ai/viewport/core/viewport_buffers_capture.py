@@ -437,10 +437,16 @@ class ViewportBuffersCapture:
         prim_lakeview = self._viewport.stage.GetPrimAtPath("/World/Cameras/ProjectionTemplate_LakeView")
         prim_lakeview_visibility = prim_lakeview.GetAttribute("visibility")
         prim_lakeview_visibility_value = prim_lakeview_visibility.Get()
+
         prim_lookout = self._viewport.stage.GetPrimAtPath("/World/Cameras/ProjectionTemplate_lookout")
         prim_lookout_visibility = prim_lookout.GetAttribute("visibility")
         prim_lookout_visibility_value = prim_lookout_visibility.Get()
-        if prim_lakeview_visibility_value == "inherited" and prim_lookout_visibility_value == "inherited":
+
+        prim_edify = self._viewport.stage.GetPrimAtPath("/World/Cameras/ProjectionTemplate_Edify")
+        prim_edify_visibility = prim_edify.GetAttribute("visibility")
+        prim_edify_visibility_value = prim_edify_visibility.Get()
+
+        if prim_lakeview_visibility_value == "inherited" and prim_lookout_visibility_value == "inherited" and prim_edify_visibility_value == "inherited":
             new_payload = {"variant": "Lake_view"}
             _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
             new_event_type = carb.events.type_from_string("setBackdropVariant")
@@ -451,6 +457,15 @@ class ViewportBuffersCapture:
                 await app.next_update_async()
 
             new_payload = {"variant": "Lookout"}
+            _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
+            new_event_type = carb.events.type_from_string("setBackdropVariant")
+            bus = omni.kit.app.get_app().get_message_bus_event_stream()
+            bus.push(new_event_type, sender=_sender_id, payload=new_payload)
+            app = omni.kit.app.get_app()
+            for _ in range(5):
+                await app.next_update_async()
+
+            new_payload = {"variant": "Edify"}
             _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
             new_event_type = carb.events.type_from_string("setBackdropVariant")
             bus = omni.kit.app.get_app().get_message_bus_event_stream()
