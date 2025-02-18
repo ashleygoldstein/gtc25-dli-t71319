@@ -256,6 +256,8 @@ class UpliftParameterWidget:
         except Exception as e:
             print(f"❌ Error sending backdrop variant event: {str(e)}")
 
+
+
     def check_generation_status(self, generation_id):
         """Check the status of a generation request and return panorama URL if ready."""
         api_token = "v2/N0Q1UVM2RmNPbjZaSE9seXVydTR2NExZaEFmejZUV0svNDYwNTY0NjM1L2N1c3RvbWVyLzQvRnpEdVpHVmhMVlNkUW10c2l3elZVQUg0Z09SYzZfTktnQzBCUHBURnJsWEZxTWF3SUpzc3JXRjhrRm5ONW5La2FUNm9YREZWX1RZa2o2czRqU1AtNlBUTTd0d0NfaGYyMWQ5T2VKWHpKOVVUVDhaNFFKbDRGSmprMkpORkJjY1AzS0I1cHBOekh6Yk1ldF83azdfRWpmZkxKbUNsWGsxZ25vazVFZDRBWTl1cVI4OEo5Qk1acHVmM2VEY1lGWG04NjRiSmZ2VktvUDNGbW1xMWUybWR0QS94dW13dzN4NWdGNmlzZVJlUG12SDBR"
@@ -361,6 +363,22 @@ class UpliftParameterWidget:
                         if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
                             print(f"✓ HDR image saved to: {target_path}")
 
+                                                    # Get the stage
+                            stage = omni.usd.get_context().get_stage()
+                            if stage:
+                                # Reload the Edify prim specifically
+                                edify_prim_path = "/World/HDRI_backgrounds/Projection_Edify"
+                                edify_prim = stage.GetPrimAtPath(edify_prim_path)
+                                if edify_prim:
+                                    # Force a reload of the prim
+                                    stage.SetEditTarget(stage.GetSessionLayer())
+                                    stage.SetEditTarget(stage.GetRootLayer())
+
+                                    print("✓ Edify prim reloaded")
+                                else:
+                                    print(f"❌ Could not find Edify prim at {edify_prim_path}")
+
+
                             # Switch to Edify variant
                             _sender_id = carb.events.acquire_events_interface().acquire_unique_sender_id()
                             new_event_type = carb.events.type_from_string("setBackdropVariant")
@@ -370,6 +388,7 @@ class UpliftParameterWidget:
 
                             # Wait for viewport update
                             app = omni.kit.app.get_app()
+
                             for _ in range(10):
                                 await app.next_update_async()
 
