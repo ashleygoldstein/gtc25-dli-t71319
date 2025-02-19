@@ -40,5 +40,6 @@ preview_image = "coffee_machine_0.png"
 "omni.kit.window.filepicker" = {}
 "omni.ai.viewport.core" = {}
 
+
 [[python.module]]
 name = "omni.ai.viewport.widget"
