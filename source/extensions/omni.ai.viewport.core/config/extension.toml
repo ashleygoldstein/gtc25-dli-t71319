@@ -46,7 +46,7 @@ exts."omni.ai.viewport.core".comfy.workflows_folder = "workflows/"
 exts."omni.ai.viewport.core".comfy.default_workflow = "realtime_workflow_v3"
 
 # remote version
-#exts."omni.ai.viewport.core".comfy.server_address = "<REMOTE_IP_ADDRESS>:<PORT>"
+exts."omni.ai.viewport.core".comfy.server_address = "<REMOTE_IP_ADDRESS>:<PORT>"
 
 # container version
 exts."omni.ai.viewport.core".comfy.server_address = "comfyui:80"
