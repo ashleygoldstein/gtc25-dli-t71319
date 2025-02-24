@@ -436,30 +436,30 @@ class UpliftParameterWidget:
                         Info(tooltip_heading="Text search", tooltip="This sets the USD Variant Set for different HDR images used beyond the window of the scene. These were generated using Edify360.")
 
                 # COMMENT OUT THIS SECTION
-                    """Build the Dropdown for Environment HDRI"""
-                    combo = ComboBox(
-                        0,
-                        "Lake View",
-                        "Lookout",
-                        "Edify",
-                        "None",
-                        arrow_only=False,
-                    )
-                    combo.model.add_item_changed_fn(self.change_env)
+                    # """Build the Dropdown for Environment HDRI"""
+                    # combo = ComboBox(
+                    #     0,
+                    #     "Lake View",
+                    #     "Lookout",
+                    #     "Edify",
+                    #     "None",
+                    #     arrow_only=False,
+                    # )
+                    # combo.model.add_item_changed_fn(self.change_env)
                 # END OF COMMENT OUT SECTION
 
 
                 # UNCOMMENT OUT THIS SECTION FOR EDIFY PROMPT
-                    # """Build the prompt field and run button for EDIFY Prompt."""
-                    # with ui.HStack():
-                    #     self._string_model = ui.SimpleStringModel("")
-                    #     field = ui.StringField(self._string_model, height=25, placeholder="Enter your prompt here")
-                    #     self._run_button = ui.Button(
-                    #         "Run",
-                    #         width=90,
-                    #         clicked_fn=lambda: asyncio.ensure_future(self.run_async_handler()),
-                    #         style={"Button": {"border_radius": 20},"background_color": 0x7600FFb9 }
-                    #     )
+                    """Build the prompt field and run button for EDIFY Prompt."""
+                    with ui.HStack():
+                        self._string_model = ui.SimpleStringModel("")
+                        field = ui.StringField(self._string_model, height=25, placeholder="Enter your prompt here")
+                        self._run_button = ui.Button(
+                            "Run",
+                            width=90,
+                            clicked_fn=lambda: asyncio.ensure_future(self.run_async_handler()),
+                            style={"Button": {"border_radius": 20},"background_color": 0x7600FFb9 }
+                        )
                 # END OF UNCOMMENT OUT SECTION
 
 
