@@ -346,6 +346,8 @@ class UpliftParameterWidget:
                             app = omni.kit.app.get_app()
                             context = omni.usd.get_context()
                             stage = context.get_stage()
+                            print(f"\nGenerated HDR URL: {panorama_url}")  # Add this line
+                            app = omni.kit.app.get_app()
 
                             if stage:
                                 stage_path = context.get_stage_url()
@@ -536,28 +538,21 @@ class UpliftParameterWidget:
                     Info(tooltip_heading="Heading", tooltip=param["default_value"])
                 self._build_float_param(param)
 
-    def run_async_handler(self):
+    async def run_async_handler(self):
         """Handle async operations and keep track of tasks."""
-        import asyncio
-        task = asyncio.ensure_future(self.on_run_clicked())
-        self._tasks.append(task)
-
-
-        def cleanup_task(future):
-            self._tasks.remove(future)
-            self._string_model = None
-            self._combo_model = None
-
-        task.add_done_callback(cleanup_task)
-
-    async def on_run_clicked(self):
-        """Handle the Run button click."""
-        self._run_button.enabled = False
-        self._run_button.text = "Running..."
-
         try:
+            # Disable button and change text
+            self._run_button.enabled = False
+            self._run_button.text = "Running..."
+
+            # Call the API
             await self.call_shutterstock_api(self._string_model.get_value_as_string())
+
         finally:
             # Restore button state
             self._run_button.enabled = True
             self._run_button.text = "Run"
+
+            # Cleanup
+            self._string_model = None
+            self._combo_model = None
