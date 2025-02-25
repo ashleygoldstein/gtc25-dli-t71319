@@ -34,6 +34,7 @@ class AIViewportWidgetExtension(omni.ext.IExt):
         self._input_window = None
         self._output_window = None
 
+
         # The ability to show the window if the system requires it. We use it in QuickLayout.
         ui.Workspace.set_show_window_fn(
             AIViewportWidgetExtension.INPUT_WINDOW_NAME, partial(self.show_input_window, True)
@@ -64,6 +65,16 @@ class AIViewportWidgetExtension(omni.ext.IExt):
         if self._output_window:
             self._output_window.destroy()
             self._output_window = None
+
+        if hasattr(self, '_run_button'):
+            self._run_button.clicked_fn = None
+            self._run_button = None
+
+        if hasattr(self, '_string_model'):
+            self._string_model = None
+
+        if hasattr(self, '_combo_model'):
+            self._combo_model = None
 
         # Deregister the function that shows the window from omni.ui
         ui.Workspace.set_show_window_fn(AIViewportWidgetExtension.INPUT_WINDOW_NAME, None)

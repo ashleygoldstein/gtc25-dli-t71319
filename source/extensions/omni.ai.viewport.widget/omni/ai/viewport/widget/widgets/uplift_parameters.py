@@ -346,7 +346,7 @@ class UpliftParameterWidget:
                             app = omni.kit.app.get_app()
                             context = omni.usd.get_context()
                             stage = context.get_stage()
-                            print(f"\nGenerated HDR URL: {panorama_url}")  # Add this line
+                            print(f"\nGenerated HDR URL: {panorama_url}")
                             app = omni.kit.app.get_app()
 
                             if stage:
