@@ -554,5 +554,5 @@ class UpliftParameterWidget:
             self._run_button.text = "Run"
 
             # Cleanup
-            self._string_model = None
+            #self._string_model = None
             self._combo_model = None
